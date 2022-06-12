@@ -1,0 +1,2 @@
+# go.clipboard-client-fyne
+
