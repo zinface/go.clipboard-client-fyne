@@ -3,48 +3,64 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"log"
 	"net/http"
 	"strings"
 	"time"
+
+	log "github.com/sirupsen/logrus"
 )
 
-type ClipBoard struct {
+type Clipboard struct {
 	Data     string    `json:"data,omitempty"`
 	Mime     string    `json:"mime,omitempty"`
 	CreateAt time.Time `json:"create_at"`
 }
 
-type ClipboardApi struct {
+func (c Clipboard) String() string {
+	var sb strings.Builder
+	fmt.Fprintf(&sb, "[%s] (%s)", c.Mime, c.CreateAt.Format("2006-01-02 15:04:05"))
+	if len(c.Data) > 0 {
+		fmt.Fprintf(&sb, " (%d bytes)", len(c.Data))
+		switch c.Mime {
+		case "text/plain":
+			fmt.Fprintf(&sb, " => %q", c.Data)
+		case "image/png":
+			// fmt.Fprintf(&sb, " => (%d x %d)", ...)
+		}
+	}
+	return sb.String()
+}
+
+type ClipboardAPI struct {
 	Address string
 }
 
-func (api ClipboardApi) Get() (ClipBoard, error) {
+func (api ClipboardAPI) Get() (Clipboard, error) {
 	resp, err := http.Get(api.Address + "/clipboard")
 	if err != nil {
-		return ClipBoard{}, err
+		return Clipboard{}, err
 	}
 	defer resp.Body.Close()
 
-	var c ClipBoard
+	var c Clipboard
 	if err := json.NewDecoder(resp.Body).Decode(&c); err != nil {
 		return c, err
 	}
 
-	log.Println("api.Get():", c.Mime, c.CreateAt)
+	log.Debugf("api.Get(): %v", c)
 
 	return c, nil
 }
 
-func (api ClipboardApi) Set(content, mime string) (ClipBoard, error) {
+func (api ClipboardAPI) Set(content, mime string) (Clipboard, error) {
 	resp, err := http.Post(api.Address+"/clipboard", "application/json",
 		strings.NewReader(`{"data":"`+content+`","mime":"`+mime+`"}`))
 	if err != nil {
-		return ClipBoard{}, err
+		return Clipboard{}, err
 	}
 	defer resp.Body.Close()
 
-	var c ClipBoard
+	var c Clipboard
 	if err := json.NewDecoder(resp.Body).Decode(&c); err != nil {
 		return c, err
 	}
@@ -53,23 +69,23 @@ func (api ClipboardApi) Set(content, mime string) (ClipBoard, error) {
 		return c, fmt.Errorf("mime type not match")
 	}
 
-	log.Println("api.Set():", c.Mime, c.CreateAt)
+	log.Debugf("api.Set(): %v", c)
 
 	return c, nil
 }
 
-func (api ClipboardApi) Info() (ClipBoard, error) {
+func (api ClipboardAPI) Info() (Clipboard, error) {
 	resp, err := http.Get(api.Address + "/clipboard/info")
 	if err != nil {
-		return ClipBoard{}, err
+		return Clipboard{}, err
 	}
 	defer resp.Body.Close()
 
-	var c ClipBoard
+	var c Clipboard
 	if err := json.NewDecoder(resp.Body).Decode(&c); err != nil {
 		return c, err
 	}
-	log.Println("api.Info():", c.Mime, c.CreateAt)
+	log.Tracef("api.Info(): %v", c)
 
 	return c, nil
 }
