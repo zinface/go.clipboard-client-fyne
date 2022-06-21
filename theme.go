@@ -9,9 +9,9 @@ import (
 	"fyne.io/fyne/v2/theme"
 )
 
-//go:embed assets/icons/systray.png
+//go:embed assets/icons/icon.png
 var icon_systray []byte
-var resourceIconSystray = fyne.NewStaticResource("systray.png", icon_systray)
+var resourceIconSystray = fyne.NewStaticResource("icon.png", icon_systray)
 
 //go:embed assets/fonts/wqy-microhei.ttc
 var font_wqy_microhei []byte
