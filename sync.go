@@ -145,7 +145,7 @@ func (s *Sync) WatchCloud(ctx context.Context, handleText OnTextChanged, handleI
 	//	监听云剪贴板变化
 	for {
 		select {
-		case <-time.Tick(time.Second * 5):
+		case <-time.Tick(3 * time.Second):
 			//	首先从服务器上检查最新的剪切板内容
 			latest, err := s.API.Info()
 			if err != nil {

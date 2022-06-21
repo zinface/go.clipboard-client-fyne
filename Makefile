@@ -2,6 +2,7 @@ run:
 	go run .
 
 build:
+	go mod tidy
 	go build -o ./bin/clipboard-client .
 
 fonts:
