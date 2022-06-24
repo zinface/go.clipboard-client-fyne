@@ -2,7 +2,11 @@ module clipboard_client
 
 go 1.18
 
-require fyne.io/fyne/v2 v2.2.1-0.20220609102042-f01b3d496f6d
+require (
+	fyne.io/fyne/v2 v2.2.1-0.20220609102042-f01b3d496f6d
+	github.com/sirupsen/logrus v1.8.1
+	golang.design/x/clipboard v0.6.2
+)
 
 require (
 	fyne.io/systray v1.10.0 // indirect
@@ -22,7 +26,9 @@ require (
 	github.com/srwiley/oksvg v0.0.0-20200311192757-870daf9aa564 // indirect
 	github.com/srwiley/rasterx v0.0.0-20200120212402-85cb7272f5e9 // indirect
 	github.com/stretchr/testify v1.7.2 // indirect
+	github.com/tevino/abool v1.2.0 // indirect
 	github.com/yuin/goldmark v1.4.0 // indirect
+	golang.org/x/exp v0.0.0-20200224162631-6cc2880d07d6 // indirect
 	golang.org/x/image v0.0.0-20220601225756-64ec528b34cd // indirect
 	golang.org/x/mobile v0.0.0-20211207041440-4e6c2922fdee // indirect
 	golang.org/x/net v0.0.0-20210805182204-aaa1db679c0d // indirect

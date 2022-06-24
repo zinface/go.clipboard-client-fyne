@@ -1,23 +1,30 @@
 package main
 
 import (
+	"context"
 	"flag"
-	"log"
-	"time"
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/app"
-	"fyne.io/fyne/v2/canvas"
-	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/driver/desktop"
-	"fyne.io/fyne/v2/layout"
-	"fyne.io/fyne/v2/widget"
+	log "github.com/sirupsen/logrus"
 )
 
-var address = flag.String("addr", "http://localhost:9090", "服务器地址")
+var (
+	address = flag.String("addr", "http://localhost:9090", "服务器地址")
+	verbose = flag.Bool("v", false, "打印详细日志")
+)
 
 func main() {
+	//	初始化命令行参数
 	flag.Parse()
+
+	//	初始化日志
+	if *verbose {
+		log.SetLevel(log.TraceLevel)
+	} else {
+		log.SetLevel(log.DebugLevel)
+	}
 
 	//	应用
 	a := app.New()
@@ -26,88 +33,27 @@ func main() {
 
 	//	窗口
 	w := a.NewWindow("云剪贴板")
-	w.Resize(fyne.NewSize(400, 300))
-
 	//	窗口内容
-	label := widget.NewLabel("云剪贴板!")
-	img := canvas.NewImageFromResource(resourceIconSystray)
-	img.FillMode = canvas.ImageFillOriginal
-	h := container.New(layout.NewCenterLayout(), img, label)
-	w.SetContent(h)
+	switcher := NewImageTextSwitcher(&w)
+	switcher.Reset()
+	//	设置窗口内容
+	w.SetContent(switcher.Container)
 
 	//	系统托盘图标
-	menu := fyne.NewMenu("",
-		fyne.NewMenuItem("复制", func() {
-			log.Println("TODO: 复制 ...")
-		}),
-		fyne.NewMenuItem("复制为Base64", func() {
-			log.Println("TODO: 复制为Base64...")
-		}),
-		fyne.NewMenuItem("显示窗口", func() {
-			log.Println("显示窗口")
-			w.Show()
-		}),
-	)
 	if a, ok := a.(desktop.App); ok {
+		menu := fyne.NewMenu("",
+			fyne.NewMenuItem("显示窗口", w.Show))
 		a.SetSystemTrayMenu(menu)
 	}
 
-	//	启动剪切板刷新
-	api := ClipboardApi{Address: *address}
-	log.Printf("服务器地址: %s\n", api.Address)
+	//	启动本地及云之剪切板监控
+	sync := NewSync(*address)
 
-	tick := time.NewTicker(time.Second * 5)
-	defer tick.Stop()
-	done := make(chan struct{})
-	defer close(done)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 
-	var clipboard ClipBoard
-	var err error
-
-	if clipboard, err = api.Info(); err != nil {
-		log.Fatal(err)
-	}
-
-	go func() {
-		for {
-			select {
-			case <-tick.C:
-				//	首先从服务器上检查最新的剪切板内容
-				var latest ClipBoard
-				if latest, err = api.Info(); err != nil {
-					log.Println(err)
-				}
-				if latest.CreateAt != clipboard.CreateAt {
-					//	更新剪切板内容
-					if clipboard, err = api.Get(); err != nil {
-						log.Println(err)
-					} else {
-						log.Println("剪贴板：[客户端 <= 服务器]:", clipboard.Mime, clipboard.CreateAt)
-						switch clipboard.Mime {
-						case "text/plain":
-							w.Clipboard().SetContent(clipboard.Data)
-						case "image/png":
-							//	TODO: 图片
-						}
-					}
-				}
-				//	如果本地剪切板内容有所更新
-				content := w.Clipboard().Content()
-				if content != clipboard.Data {
-					//	更新服务器上的剪切板内容
-					//	TODO: 图片
-					if c, err := api.Set(content, "text/plain"); err != nil {
-						log.Println(err)
-					} else {
-
-						log.Println("剪贴板：[客户端 => 服务器]:", c.Mime, c.CreateAt)
-					}
-				}
-			case <-done:
-				return
-			}
-		}
-	}()
+	go sync.WatchLocal(ctx, switcher.ShowText, switcher.ShowImage)
+	go sync.WatchCloud(ctx, switcher.ShowText, switcher.ShowImage)
 
 	//	运行显示
 	w.ShowAndRun()
